@@ -1,0 +1,5 @@
+cron:
+
+- description: queue a task for each subject
+  url: /runner/run_cron/
+  schedule: every 2 hours
