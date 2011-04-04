@@ -139,11 +139,16 @@ class OAuthWrangler(object):
                                    self.consumer, None)
         self.connection.request(oauth_request.http_method, REQUEST_TOKEN_URL,
                                 headers=oauth_request.to_header())
-        response = self.connection.getresponse().read()
-        # Because why should read return just the body?
-        if '\n\n' in response:
-            response = response.split('\n\n')[1]
-        return oauth.OAuthToken.from_string(response)
+        response = self.connection.getresponse()
+        body = response.read()
+        if response.status >= 200 and response.status < 300:
+            # Because why should read return just the body?
+            if '\n\n' in body:
+                body = body.split('\n\n')[1]
+            return oauth.OAuthToken.from_string(body)
+        logging.error("unexpected server response %d: %s"%(response.status,body))
+        raise Exception(body) # TODO - better class here
+
 
     def authorize_request_token_url(self, token):
         """Get the url to use to authorize the token"""
@@ -161,8 +166,15 @@ class OAuthWrangler(object):
                                    self.consumer, token)
         self.connection.request(oauth_request.http_method, ACCESS_TOKEN_URL,
                                 headers=oauth_request.to_header())
-        response = self.connection.getresponse().read()
-        return oauth.OAuthToken.from_string(response)
+
+        response = self.connection.getresponse()
+        body = response.read()
+        if response.status >= 200 and response.status < 300:
+            logging.info(body)
+            return oauth.OAuthToken.from_string(body)
+            return body
+        logging.error("unexpected server response %d: %s"%(response.status,body))
+        raise Exception(body) # TODO - better class here
 
     def get_resource(self, token, resource_url, paramdict):
         """GET an OAuth resource"""
@@ -173,8 +185,13 @@ class OAuthWrangler(object):
                                    self.consumer, token)
         self.connection.request(oauth_request.http_method,
                                 oauth_request.to_url())
-        response = self.connection.getresponse().read()
-        return response
+        response = self.connection.getresponse()
+        body = response.read()
+        if response.status >= 200 and response.status < 300:
+            logging.info(body)
+            return body
+        logging.error("unexpected server response %d: %s"%(response.status,body))
+        raise Exception(body) # TODO - better class here
 
     def post_resource(self, token, resource_url, paramdict):
         """POST an OAuth resource"""
@@ -187,9 +204,14 @@ class OAuthWrangler(object):
         self.connection.request(oauth_request.http_method, resource_url,
                                 body=oauth_request.to_postdata(),
                                 headers=headers)
-        response = self.connection.getresponse().read()
-        logging.info(response)
-        return response
+
+        response = self.connection.getresponse()
+        body = response.read()
+        if response.status >= 200 and response.status < 300:
+            logging.info(body)
+            return body
+        logging.error("unexpected server response %d: %s"%(response.status,body))
+        raise Exception(body) # TODO - better class here
 
 
 ################################################################################
