@@ -134,6 +134,11 @@ def prostheticdata_for_access_token(token):
 # API OAuth Access class
 ################################################################################
 
+class OAuthWranglerException(Exception):
+    def __init__(self, status, body):
+        super(OAuthWranglerException, self).__init__(body)
+        self.status = status
+    
 class OAuthWrangler(object):
     """OAuth registration and resource access support"""
 
@@ -162,7 +167,7 @@ class OAuthWrangler(object):
                 body = body.split('\n\n')[1]
             return oauth.OAuthToken.from_string(body)
         logging.error("unexpected server response %d: %s"%(response.status,body))
-        raise Exception(body) # TODO - better class here
+        raise OAuthWranglerException(response.status, body)
 
 
     def authorize_request_token_url(self, token):
@@ -189,7 +194,7 @@ class OAuthWrangler(object):
             return oauth.OAuthToken.from_string(body)
             return body
         logging.error("unexpected server response %d: %s"%(response.status,body))
-        raise Exception(body) # TODO - better class here
+        raise OAuthWranglerException(response.status, body)
 
     def get_resource(self, token, resource_url, paramdict):
         """GET an OAuth resource"""
@@ -206,7 +211,7 @@ class OAuthWrangler(object):
             logging.info(body)
             return body
         logging.error("unexpected server response %d: %s"%(response.status,body))
-        raise Exception(body) # TODO - better class here
+        raise OAuthWranglerException(response.status, body)
 
     def post_resource(self, token, resource_url, paramdict):
         """POST an OAuth resource"""
@@ -226,7 +231,7 @@ class OAuthWrangler(object):
             logging.info(body)
             return body
         logging.error("unexpected server response %d: %s"%(response.status,body))
-        raise Exception(body) # TODO - better class here
+        raise OAuthWranglerException(response.status, body)
 
 
 ################################################################################
