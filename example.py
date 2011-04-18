@@ -70,7 +70,7 @@ ACCESS_TOKEN_URL = OAUTH_SERVER_PATH + '/access_token/'
 AUTHORIZATION_URL = OAUTH_SERVER_PATH + '/authorize/'
 
 API_SERVER_PATH = 'http://%s/api/1' % API_SERVER
-RUN_URL = API_SERVER_PATH + '/weavr/run/'
+STATE_URL = API_SERVER_PATH + '/weavr/state/'
 POST_URL = API_SERVER_PATH + '/weavr/post/'
 
 
@@ -317,10 +317,9 @@ class HandleProstheticTask(webapp.RequestHandler):
     def get_emotion(self):
         """Fetch the emotion of the Weavr's most recent run from the server
            using the API"""
-        runs_string = self.wrangler.get_resource(self.token, RUN_URL, {})
-        runs = simplejson.loads(runs_string)
-        run = runs[-1]
-        return run['emotion']
+        state_string = self.wrangler.get_resource(self.token, STATE_URL, {})
+        state = simplejson.loads(state_string)
+        return state['emotion']
 
     def post_message(self, message, emotion):
         """Post a message to the Weavr's publishing stream on the server using
