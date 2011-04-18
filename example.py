@@ -28,6 +28,7 @@ query a Weavr's state and push to its publishing stream.
 ################################################################################
 
 import os
+import re
 import httplib
 import logging
 import oauth.oauth as oauth
