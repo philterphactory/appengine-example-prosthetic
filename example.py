@@ -277,40 +277,37 @@ class AcceptAuthorization(webapp.RequestHandler):
         if not confirmed:
             self.return_error('Permission not confirmed.')
             return
-        else:
-            # Get the token and store the verifier
-            request_token = request_token_for_key(token)
-            if request_token:
-                request_token.oauth_verifier = verifier
-                request_token.authorized = bool(confirmed)
-                request_token.put()
-                wrangler = OAuthWrangler()
-                # Now getthe access token
-                verified_token = oauth.OAuthToken(request_token.oauth_key,
-                                                  request_token.oauth_secret)
-                access_token = wrangler.get_access_token(verified_token,
-                                                         verifier)
-                obj = AccessToken(oauth_key=access_token.key,
-                                  oauth_secret=access_token.secret)
-                obj.put()
-                prosthetic = ProstheticData(request_token=request_token,
-                                            access_token=obj)
-                prosthetic.put()
-                
-                try:
-                    # fetch state from server to demonstrate that everything works.
-                    state_string = OAuthWrangler().get_resource(access_token, STATE_URL, {})
-                    state = simplejson.loads(state_string)
-                except Exception, e:
-                    self.return_error("Couldn't fetch weavr state: %s"%e)
-                    return
 
-                path = os.path.join(os.path.dirname(__file__), 'templates', 'success.html')
-                self.response.out.write(template.render(path, { "state":state }))
+        request_token = request_token_for_key(token)
+        if not request_token:
+            self.return_error("Couldn't find Token")
+            return
 
-            else:
-                self.return_error("Couldn't find Token")
-                return
+        wrangler = OAuthWrangler()
+
+        # Now get the access token
+        verified_token = oauth.OAuthToken(request_token.oauth_key, request_token.oauth_secret)
+        access_token = wrangler.get_access_token(verified_token, verifier)
+
+        # fetch state from server to demonstrate that the access token works.
+        try:
+            state_string = wrangler.get_resource(access_token, STATE_URL, {})
+            state = simplejson.loads(state_string)
+        except Exception, e:
+            self.return_error("Couldn't fetch weavr state: %s"%e)
+            return
+
+        # store the access token in the datastore
+        obj = AccessToken(oauth_key=access_token.key, oauth_secret=access_token.secret)
+        obj.put()
+
+        prosthetic = ProstheticData(request_token=request_token, access_token=obj)
+        prosthetic.put()
+        
+        # all done!
+        path = os.path.join(os.path.dirname(__file__), 'templates', 'success.html')
+        self.response.out.write(template.render(path, { "state":state }))
+
 
 
 class HandleRunCron(webapp.RequestHandler):
@@ -331,43 +328,46 @@ class HandleRunCron(webapp.RequestHandler):
 class HandleProstheticTask(webapp.RequestHandler):
     """Handle a run task for a Weavr"""
 
-    def get_emotion(self):
+    def get_emotion(self, token):
         """Fetch the emotion of the Weavr's most recent run from the server
            using the API"""
-        state_string = self.wrangler.get_resource(self.token, STATE_URL, {})
+        wrangler = OAuthWrangler()
+        state_string = wrangler.get_resource(token, STATE_URL, {})
         state = simplejson.loads(state_string)
         return state['emotion']
 
-    def post_message(self, message, emotion):
+
+    def post_message(self, token, message, emotion):
         """Post a message to the Weavr's publishing stream on the server using
            the API"""
-        logging.info(message)
-        logging.info(emotion)
-        self.wrangler.post_resource(self.token,
+        logging.info("posting status '%s' while feeling '%s'"%(message, emotion))
+        wrangler = OAuthWrangler()
+        wrangler.post_resource(token,
                                     POST_URL,
                                     {'category': 'status',
                                      'status': message,
                                      'keywords': emotion})
 
+
     def get(self):
         """Handle the run task request"""
         connection_key = self.request.get('key')
-        self.data = prostheticconnectdata_for_key(connection_key)
-        self.token = oauth.OAuthToken(key=self.data.access_token.oauth_key,
-                                      secret=self.data.access_token.\
-                                          oauth_secret)
-        self.wrangler = OAuthWrangler()
+        data = prostheticconnectdata_for_key(connection_key)
+        token = oauth.OAuthToken(key=data.access_token.oauth_key,
+                                      secret=data.access_token.oauth_secret)
+
         #FIXME: Handle de-authorized Weavrs and remove the data objects for them
-        emotion = self.get_emotion()
-        if emotion != self.data.previous_emotion:
-            message = "I was feeling %s, but now I'm %s" % \
-                (self.data.previous_emotion, emotion)
+        emotion = self.get_emotion(token)
+
+        if emotion != data.previous_emotion:
+            message = "I was feeling %s, but now I'm %s"%(data.previous_emotion, emotion)
             # The emotion changed, so save it
-            self.data.previous_emotion = emotion
-            self.data.put()
+            data.previous_emotion = emotion
+            data.put()
         else:
-            message = "I am still feeling " +  emotion
-        self.post_message(message, emotion)
+            message = "I am still feeling %s"%emotion
+
+        self.post_message(token, message, emotion)
 
 
 class Homepage(webapp.RequestHandler):
