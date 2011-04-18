@@ -161,7 +161,7 @@ class OAuthWrangler(object):
             body = body.split('\n\n')[1]
 
         if status < 200 or status >= 300:
-            logging.error("unexpected server response %d: %s"%(status,body))
+            logging.error("unexpected server response %d"%(status))
             raise OAuthWranglerException(status, body)
 
         return body
@@ -351,8 +351,16 @@ class HandleProstheticTask(webapp.RequestHandler):
         token = oauth.OAuthToken(key=data.access_token.oauth_key,
                                       secret=data.access_token.oauth_secret)
 
-        #FIXME: Handle de-authorized Weavrs and remove the data objects for them
-        emotion = self.get_emotion(token)
+        try:
+            emotion = self.get_emotion(token)
+        except OAuthWranglerException, e:
+            if e.status == 401:
+                logging.warn("token has been revoked!")
+                #FIXME: Handle de-authorized Weavrs and remove the data objects for them
+                return
+            else:
+                raise
+            
 
         if emotion != data.previous_emotion:
             message = "I was feeling %s, but now I'm %s"%(data.previous_emotion, emotion)
