@@ -291,9 +291,17 @@ class AcceptAuthorization(webapp.RequestHandler):
                 prosthetic = ProstheticData(request_token=request_token,
                                             access_token=obj)
                 prosthetic.put()
+                
+                try:
+                    # fetch state from server to demonstrate that everything works.
+                    state_string = OAuthWrangler().get_resource(access_token, STATE_URL, {})
+                    state = simplejson.loads(state_string)
+                except Exception, e:
+                    self.return_error("Couldn't fetch weavr state: %s"%e)
+                    return
 
                 path = os.path.join(os.path.dirname(__file__), 'templates', 'success.html')
-                self.response.out.write(template.render(path, {}))
+                self.response.out.write(template.render(path, { "state":state }))
 
             else:
                 self.return_error("Couldn't find Token")
