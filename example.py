@@ -36,6 +36,7 @@ import simplejson
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.ext.webapp import template
 
 try:
     from google.appengine.api.taskqueue import Task
@@ -254,8 +255,8 @@ class AcceptAuthorization(webapp.RequestHandler):
 
     def return_error(self, reason):
         """Lots can go wrong in OAuth, so report it informatively to users"""
-        self.response.out.write('''<html><head><title>Error</title></head>
-<body>Sorry, there was an error. %s</body></html>''' % reason)
+        path = os.path.join(os.path.dirname(__file__), 'templates', 'error.html')
+        self.response.out.write(template.render(path, { "reason":reason }))
 
     def get(self):
         """Accept the authorization from the server and store the data we use
@@ -267,8 +268,10 @@ class AcceptAuthorization(webapp.RequestHandler):
         # Make sure we have the required parameters
         if (not verifier) or (not token):
             self.return_error('Missing parameter(s)')
+            return
         if not confirmed:
             self.return_error('Permission not confirmed.')
+            return
         else:
             # Get the token and store the verifier
             request_token = request_token_for_key(token)
@@ -288,12 +291,13 @@ class AcceptAuthorization(webapp.RequestHandler):
                 prosthetic = ProstheticData(request_token=request_token,
                                             access_token=obj)
                 prosthetic.put()
-                self.response.out.write('''<html><head><title>Success!</title>
-</head><body>Authorization complete!
-You can now see the Prosthetic in the Editor.<br/ >
-(it will run every few hours automatically)</body></html>''')
+
+                path = os.path.join(os.path.dirname(__file__), 'templates', 'success.html')
+                self.response.out.write(template.render(path, {}))
+
             else:
                 self.return_error("Couldn't find Token")
+                return
 
 
 class HandleRunCron(webapp.RequestHandler):
@@ -359,12 +363,8 @@ class Homepage(webapp.RequestHandler):
     def get(self):
         """Tell the user about the app and let them start authorizing access
            to a Weavr"""
-        self.response.out.write('''<html><head><title>Weavrs API Demo</title>
-</head><body>
-<h2>Click on this link to authorize the Prosthetic to gain read and publishing
-access to one of your Weavrs:<br />
-<a href="/start_authorizing/">click me!</a></h2>
-</body></html>''')
+        path = os.path.join(os.path.dirname(__file__), 'templates', 'homepage.html')
+        self.response.out.write(template.render(path, {}))
 
 
 ################################################################################
