@@ -27,6 +27,7 @@ query a Weavr's state and push to its publishing stream.
 # Imports
 ################################################################################
 
+import os
 import httplib
 import logging
 import oauth.oauth as oauth
@@ -48,7 +49,9 @@ except:
 # Create your Prosthetic at http://weavrs.com/developer/
 ################################################################################
 
-THIS_SERVER = 'YOUR-INSTANCE.appspot.com'
+# address of this server. Leave as None to guess. You will need to set
+# this manually if you have your own domain name.
+THIS_SERVER = None
 
 CONSUMER_KEY = 'YOUR-PROSTHETIC-KEY'
 CONSUMER_SECRET = 'YOUR-PROSTHETIC-SECRET'
@@ -61,8 +64,6 @@ CONSUMER_SECRET = 'YOUR-PROSTHETIC-SECRET'
 
 API_SERVER = 'weavrs.com'
 
-LOCAL_CALLBACK_URL = 'http://%s/oauth_callback/' % THIS_SERVER
-
 OAUTH_SERVER_PATH = 'http://%s/oauth' % API_SERVER
 REQUEST_TOKEN_URL = OAUTH_SERVER_PATH + '/request_token/'
 ACCESS_TOKEN_URL = OAUTH_SERVER_PATH + '/access_token/'
@@ -71,6 +72,19 @@ AUTHORIZATION_URL = OAUTH_SERVER_PATH + '/authorize/'
 API_SERVER_PATH = 'http://%s/api/1' % API_SERVER
 RUN_URL = API_SERVER_PATH + '/weavr/run/'
 POST_URL = API_SERVER_PATH + '/weavr/post/'
+
+
+# guess local server name if needed
+if not THIS_SERVER:
+    APPENGINE_DEV = os.environ.get("SERVER_SOFTWARE", "").startswith("Dev")
+    INSTANCE_NAME = os.environ.get("APPLICATION_ID", "localhost")
+    if APPENGINE_DEV:
+        THIS_SERVER = "localhost:8080"
+    else:
+        THIS_SERVER = "%s.appspot.com"%INSTANCE_NAME
+
+LOCAL_CALLBACK_URL = 'http://%s/oauth_callback/' % THIS_SERVER
+
 
 
 ################################################################################
