@@ -64,7 +64,7 @@ CONSUMER_SECRET = 'YOUR-PROSTHETIC-SECRET'
 # You don't need to edit these
 ################################################################################
 
-API_SERVER = 'weavrs.com'
+API_SERVER = 'www.weavrs.com'
 
 OAUTH_SERVER_PATH = 'http://%s/oauth' % API_SERVER
 REQUEST_TOKEN_URL = OAUTH_SERVER_PATH + '/request_token/'
